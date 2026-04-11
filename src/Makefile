@@ -1,5 +1,5 @@
-main:  main.c
-	gcc -std=c99 -Wall -pedantic -o main main.c -lncurses && ./main
+../bin/main:  main.c
+	gcc -std=c99 -Wall -pedantic -o ../bin/main main.c -lncurses && ../bin/main
 
 clean:
-	rm main && make
+	rm ../bin/main && make
