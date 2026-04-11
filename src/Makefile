@@ -1,2 +1,5 @@
 main:  main.c
-	gcc -o main main.c -lncurses && ./main
+	gcc -std=c99 -Wall -pedantic -o main main.c -lncurses && ./main
+
+clean:
+	rm main && make
