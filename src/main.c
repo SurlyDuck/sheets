@@ -1,13 +1,21 @@
+#define _POSIX_C_SOURCE 199309L
 #include <stdlib.h>
 #include <ncurses.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 
-#define YOFFSET 5
+#define YOFFSET   5
+#define PERIOD_MS 16
 
 WINDOW *gameWindow;
 WINDOW *CreateWindow(int width, int height, int ix, int iy);
-int playerPosX = 0;
-int playerPosY = 0;
+
+typedef struct v2{
+	int x;
+	int y;
+}v2;
+
 
 const char *gameMsg = "@@@@@ SNAKE! @@@@@";
 
@@ -27,6 +35,18 @@ int main(int argc, char **argv){
 	gameWindow = CreateWindow(width,height,startx,starty+YOFFSET);
 	
 	mvaddch(height/2+YOFFSET,width/2,'@');
+	timeout(PERIOD_MS);
+	struct timespec start,stop;
+	clock_gettime(CLOCK_MONOTONIC,&start);
+	for(;;){
+		int input = getch();
+		
+		if(input == 'e') break;
+		
+		clock_gettime(CLOCK_MONOTONIC,&stop);
+		double elapsed = (stop.tv_sec - start.tv_sec) + (stop.tv_nsec - start.tv_nsec)/1e9;
+ 		if(elapsed > 5) break; //breaks after 5 minutes
+	}	
 
 	getch();
 	delwin(gameWindow);
@@ -43,81 +63,3 @@ WINDOW *CreateWindow(int width, int height, int ix, int iy){
 	return localWin;
 
 }
-/*
-int mains3(){
-	
-	initscr();
-	//addch(ACS_LANTERN | A_BOLD);	
-	//addstr("\nthis is a string");
-	//refresh();
-	
-	int x,y = 0;
-	getmaxyx(stdscr,y,x);
-	printw("ROWS: %d, COLUMNS: %d",y,x);
-	
-	//mvaddch(y/2,x/2,'b');
-
-	getch();
-	endwin();
-
-	return 0;
-}
-
-int main2(int argc, char **argv){
-	int cline, longestLine, lineLenght, longestLenght = 0;
-	char cchar;
-	initscr();
-	noecho();
-	raw();
-	printw("Start typing!");
-	refresh();
-	
-	while(cchar !=  '\e'){
-		printw("\nLine %d:",cline);
-		cchar = getch();
-		refresh();
-		while(cchar != '\n'){
-			if(cchar == '\e') break;
-			++lineLenght;
-			attron(A_DIM);
-			printw("%c",cchar);
-			attroff(A_DIM);
-			cchar = getch();
-		}			
-		
-		if(lineLenght > longestLenght) {
-			longestLine = cline;
-			longestLenght = lineLenght;
-		}
-		++cline;
-		lineLenght = 0;
-	}	
-	
-	printw("\nLongest line: %d",longestLine);
-	printw("\nPress any key to continue...");
-	getch();
-	endwin();
-	
-	return 0;
-
-}
-
-
-	initscr();
-	noecho();	
-	raw();
-	printw("The next five characters will have underline:  \n");
-	
-	int n = 5;
-	while(n --> 0){
-	int character;
-		character = getch();
-
-		attron(A_UNDERLINE);
-		printw("%c",character);
-		attroff(A_UNDERLINE);
-	}
-	refresh();
-	getch();
-	endwin();
-*/
