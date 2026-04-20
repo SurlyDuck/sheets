@@ -5,19 +5,21 @@
 #include <time.h>
 #include <unistd.h>
 
-#define YOFFSET   5
-#define PERIOD_MS 16
+#define YOFFSET         5
+#define PERIOD_MS      16
+#define PLAYER_SPEED     .3
+#define MAX_SIZE       10
 
 WINDOW *gameWindow;
 WINDOW *CreateWindow(int width, int height, int ix, int iy);
 
 typedef struct v2{
-	int x;
-	int y;
+	float x;
+	float y;
 }v2;
 
 
-const char *gameMsg = "@@@@@ SNAKE! @@@@@";
+const char *gameMsg = "Welcome to Snake Sheet! Press 'e' to quit";
 
 int main(int argc, char **argv){
 	int width, height, startx,starty = 0;
@@ -27,25 +29,34 @@ int main(int argc, char **argv){
 	raw();
 	curs_set(0);
 	getmaxyx(stdscr,height,width);
-	attron(A_BOLD | A_BLINK);
+	attron(A_BOLD);
 	mvprintw(0, (width-strlen(gameMsg))/2,gameMsg);
-	attroff(A_BOLD | A_BLINK);
+	attroff(A_BOLD);
 	refresh();
+	startx  = (width - width/2)/2;
 	height /= 2;
+	width  /= 2;
 	gameWindow = CreateWindow(width,height,startx,starty+YOFFSET);
 	
-	mvaddch(height/2+YOFFSET,width/2,'@');
+	v2 playerPos = {width/2,(starty+height/2)};
+	v2 playerDir = {1,0};
 	timeout(PERIOD_MS);
 	struct timespec start,stop;
-	clock_gettime(CLOCK_MONOTONIC,&start);
 	for(;;){
+		clock_gettime(CLOCK_MONOTONIC,&start);
 		int input = getch();
-		
+		playerPos.x += PLAYER_SPEED;
 		if(input == 'e') break;
-		
+		werase(gameWindow);
+		box(gameWindow,0,0);
+		mvwaddch(gameWindow,playerPos.y,playerPos.x,'@');
+		wrefresh(gameWindow);
+
 		clock_gettime(CLOCK_MONOTONIC,&stop);
-		double elapsed = (stop.tv_sec - start.tv_sec) + (stop.tv_nsec - start.tv_nsec)/1e9;
- 		if(elapsed > 5) break; //breaks after 5 minutes
+		double elapsed   = (stop.tv_sec - start.tv_sec) + (stop.tv_nsec - start.tv_nsec)/1e9;
+		double remaining = (double)(PERIOD_MS/1e3) - elapsed;
+		if (remaining > 0) sleep(remaining);
+		
 	}	
 
 	getch();
