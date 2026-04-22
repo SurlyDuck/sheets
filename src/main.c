@@ -22,11 +22,12 @@ WINDOW *CreateWindow(int width, int height, int ix, int iy);
 
 v2 parts[MAX_PARTS];
 v2 partsBuffer[MAX_PARTS];
-int currentLenght = 10;
+int currentLenght = 20;
 const char *gameMsg = "Welcome to Snake Sheet! Press 'e' to quit";
 
 int main(int argc, char **argv){
 	int width, height, startx,starty = 0;
+	bool canRotate = true;
 	WINDOW *gameWindow;
 
 	initscr();
@@ -59,19 +60,22 @@ int main(int argc, char **argv){
 	for(;;){
 		clock_gettime(CLOCK_MONOTONIC,&start);
 		int input       = getch();
-		bool shouldMove = false;
+
 		if(input        == 'e') break;
-		if(input        == 'l') rotation +=(float)(M_PI/2);   
-		if(input        == 'h') rotation -=(float)(M_PI/2);
+		if(input        == 'l' && canRotate) {
+			rotation +=(float)(M_PI/2); 
+			canRotate = false; 
+		}
+		if(input        == 'h' && canRotate) {
+			rotation -=(float)(M_PI/2);
+			canRotate = false;
+		}
+
 		playerDir        = (v2) {cosf(rotation), sinf(rotation)};
-		//playerPos.x += playerDir.x * PLAYER_SPEED;
-		//playerPos.y += playerDir.y * PLAYER_SPEED;
 		werase(gameWindow);
 		box(gameWindow,0,0);
-		//mvwaddch(gameWindow,playerPos.y,playerPos.x,'@');
 		parts[0].x += playerDir.x * PLAYER_SPEED;
 		parts[0].y += playerDir.y * PLAYER_SPEED;
-	 	//mvwaddch(gameWindow,parts[0].y,parts[0].x,'@');
 
 		if((int)(partsBuffer[0].x) != (int)(parts[0].x) || (int)(partsBuffer[0].y) != (int)(parts[0].y)){
 			for (int i = 1; i < currentLenght; ++i){
@@ -79,6 +83,7 @@ int main(int argc, char **argv){
 				parts[i].y = partsBuffer[i-1].y;
 			}
 			memcpy( partsBuffer, parts, sizeof(parts));
+			canRotate = true;
 		}
 		for(int i =0; i < currentLenght; ++i) {
 			
