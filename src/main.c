@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #define Y_PADDING       5
 #define PERIOD_MS      16
@@ -29,22 +30,27 @@ int main(int argc, char **argv){
 	int width, height, startx,starty = 0;
 	bool canRotate = true;
 	WINDOW *gameWindow;
-
 	initscr();
+	assert(has_colors());
+	start_color(); 
 	noecho();
+	init_color(COLOR_BLACK,0,0,0);
+	init_color(COLOR_GREEN,78,521,149);
+	init_pair(1,COLOR_GREEN, COLOR_BLACK);
 	raw();
 	curs_set(0);
 	getmaxyx(stdscr,height,width);
-	attron(A_BOLD);
+	attron(A_BOLD | COLOR_PAIR(1));
 	mvprintw(0, (width-strlen(gameMsg))/2,gameMsg);
 	attroff(A_BOLD);
+
 	refresh();
 
 	startx  = (width - width/2)/2;
 	height /= 1.5;
 	width  /= 2;
 	gameWindow = CreateWindow(width,height,startx,starty+Y_PADDING);
-
+	wattron(gameWindow,COLOR_PAIR(1));
 	v2 playerPos = {width/2,(starty+height/1.5)};
 	for(int i =0; i < MAX_PARTS; ++i){
 		parts[i]    = playerPos;
