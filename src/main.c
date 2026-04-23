@@ -23,7 +23,7 @@ WINDOW *CreateWindow(int width, int height, int ix, int iy);
 
 v2 parts[MAX_PARTS];
 v2 partsBuffer[MAX_PARTS];
-int currentLenght = 20;
+int currentLenght = 3;
 const char *gameMsg = "Welcome to Snake Sheet! Press 'e' to quit";
 
 int main(int argc, char **argv){
@@ -58,7 +58,7 @@ int main(int argc, char **argv){
 	}
    memcpy( partsBuffer, parts, sizeof(parts));
 	
-	v2 playerDir = {0,0};
+	v2 playerDir = {0};
 	float rotation = 0;
 	timeout(PERIOD_MS);
 	struct timespec start,stop;
@@ -82,6 +82,11 @@ int main(int argc, char **argv){
 		box(gameWindow,0,0);
 		parts[0].x += playerDir.x * PLAYER_SPEED;
 		parts[0].y += playerDir.y * PLAYER_SPEED;
+		
+		if((int)(parts[0].x) >= width-1) parts[0].x = 1;
+		if((int)(parts[0].x) < 1) parts[0].x = width-2;
+		if((int)(parts[0].y) >= height-1) parts[0].y = 1;
+		if((int)(parts[0].y) < 1 ) parts[0].y = height-2;
 
 		if((int)(partsBuffer[0].x) != (int)(parts[0].x) || (int)(partsBuffer[0].y) != (int)(parts[0].y)){
 			for (int i = 1; i < currentLenght; ++i){
