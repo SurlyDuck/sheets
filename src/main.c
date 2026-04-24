@@ -71,14 +71,13 @@ int main(int argc, char **argv){
 	for(;;){
 		clock_gettime(CLOCK_MONOTONIC,&start);
 		int input       = getch();
-
+		//TODO: better movement
 		if(input        == 'e') break;
 		if(input        == 'l' && canRotate) {
 			rotation +=(float)(M_PI/2); 
 			canRotate = false; 
 		}
 		if(input        == 'h' && canRotate) {
-			powerUpPos = SpawnPowerUp(width-2, height-2);
 			rotation -=(float)(M_PI/2);
 			canRotate = false;
 		}
@@ -90,6 +89,11 @@ int main(int argc, char **argv){
 		parts[0].x += playerDir.x * PLAYER_SPEED;
 		parts[0].y += playerDir.y * PLAYER_SPEED;
 		
+		if((int)(parts[0].x) == (int)(powerUpPos.x) && (int)(parts[0].y) == (int)(powerUpPos.y) ){
+			powerUpPos = SpawnPowerUp(width-2, height-2);
+			++currentLenght;
+		}
+
 		if((int)(parts[0].x) >= width-1) parts[0].x = 1;
 		if((int)(parts[0].x) < 1) parts[0].x = width-2;
 		if((int)(parts[0].y) >= height-1) parts[0].y = 1;
