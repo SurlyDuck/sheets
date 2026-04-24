@@ -1,1 +1,8 @@
-Text mode snake game in c with ncurses.
+Little games I made in ncurses for recreation.
+
+Compilling: 
+
+```
+cd src/
+make
+```
