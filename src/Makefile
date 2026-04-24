@@ -1,5 +1,10 @@
+CFLAGS := -g -std=c99 -Wall -pedantic 
+LFLAGS := -Wl,-Bstatic -lncursesw  -Wl,-Bdynamic -lm -ltinfo
+
+all: ../bin/main
+
 ../bin/main:  main.c
-	gcc -g -std=c99 -Wall -pedantic -o ../bin/main main.c -Wl,-Bstatic -lncursesw  -Wl,-Bdynamic -lm -ltinfo
+	gcc $(CFLAGS) -o $@ $^  $(LFLAGS)
 	../bin/main
 
 clean:
