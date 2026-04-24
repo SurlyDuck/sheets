@@ -13,6 +13,7 @@
 #define PERIOD_MS      16
 #define PLAYER_SPEED     .1
 #define MAX_PARTS      256
+#define GREEN_RGB      78,521,149
 
 typedef struct v2{
 	float x;
@@ -20,6 +21,7 @@ typedef struct v2{
 }v2;
 
 WINDOW *CreateWindow(int width, int height, int ix, int iy);
+v2 SpawnPowerUp(int xConstraint, int yConstraint);
 
 v2 parts[MAX_PARTS];
 v2 partsBuffer[MAX_PARTS];
@@ -30,12 +32,17 @@ int main(int argc, char **argv){
 	int width, height, startx,starty = 0;
 	bool canRotate = true;
 	WINDOW *gameWindow;
+	v2 playerDir   = {0};
+	v2 powerUpPos  = {0};
+	float rotation = 0;
+	struct timespec start,stop;
+
 	initscr();
 	assert(has_colors());
 	start_color(); 
 	noecho();
 	init_color(COLOR_BLACK,0,0,0);
-	init_color(COLOR_GREEN,78,521,149);
+	init_color(COLOR_GREEN,GREEN_RGB);
 	init_pair(1,COLOR_GREEN, COLOR_BLACK);
 	raw();
 	curs_set(0);
@@ -56,12 +63,10 @@ int main(int argc, char **argv){
 		parts[i]    = playerPos;
 		parts[i].x -= i;
 	}
+	powerUpPos = SpawnPowerUp(width-2,height-2);
    memcpy( partsBuffer, parts, sizeof(parts));
 	
-	v2 playerDir = {0};
-	float rotation = 0;
 	timeout(PERIOD_MS);
-	struct timespec start,stop;
 
 	for(;;){
 		clock_gettime(CLOCK_MONOTONIC,&start);
@@ -73,6 +78,7 @@ int main(int argc, char **argv){
 			canRotate = false; 
 		}
 		if(input        == 'h' && canRotate) {
+			powerUpPos = SpawnPowerUp(width-2, height-2);
 			rotation -=(float)(M_PI/2);
 			canRotate = false;
 		}
@@ -80,13 +86,14 @@ int main(int argc, char **argv){
 		playerDir        = (v2) {cosf(rotation), sinf(rotation)};
 		werase(gameWindow);
 		box(gameWindow,0,0);
+
 		parts[0].x += playerDir.x * PLAYER_SPEED;
 		parts[0].y += playerDir.y * PLAYER_SPEED;
 		
 		if((int)(parts[0].x) >= width-1) parts[0].x = 1;
 		if((int)(parts[0].x) < 1) parts[0].x = width-2;
 		if((int)(parts[0].y) >= height-1) parts[0].y = 1;
-		if((int)(parts[0].y) < 1 ) parts[0].y = height-2;
+		if((int)(parts[0].y) < 1) parts[0].y = height-2;
 
 		if((int)(partsBuffer[0].x) != (int)(parts[0].x) || (int)(partsBuffer[0].y) != (int)(parts[0].y)){
 			for (int i = 1; i < currentLenght; ++i){
@@ -100,6 +107,7 @@ int main(int argc, char **argv){
 			
 			mvwaddch(gameWindow,parts[i].y,parts[i].x,'@');
 		}
+		mvwaddch(gameWindow,powerUpPos.y,powerUpPos.x,ACS_DIAMOND);
 		wrefresh(gameWindow);
 
 		clock_gettime(CLOCK_MONOTONIC,&stop);
@@ -124,3 +132,33 @@ WINDOW *CreateWindow(int width, int height, int ix, int iy){
 	return localWin;
 
 }
+
+v2 SpawnPowerUp(int xConstraint, int yConstraint){
+	srand(arc4random());	
+	v2 powerUpPos = {0};
+	powerUpPos.x = (int)(1+rand() / (RAND_MAX / (xConstraint)));
+	powerUpPos.y = (int)(1+rand() / (RAND_MAX / (yConstraint)));
+
+	for(int i = 0; i < currentLenght; i++){
+		if((int)(parts[i].x) == (int)(powerUpPos.x) && (int)(parts[i].y) == (int)(powerUpPos.y)){
+			i = 0;
+			powerUpPos.x = (int)(1+rand() / (RAND_MAX / (xConstraint)));
+			powerUpPos.y = (int)(1+rand() / (RAND_MAX / (yConstraint)));
+		
+		}
+	}
+	return powerUpPos;
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+
