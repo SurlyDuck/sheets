@@ -12,6 +12,7 @@
 #define Y_PADDING       5
 #define PERIOD_MS      16
 #define PLAYER_SPEED     .1
+#define SPEED_BOOST      .5
 #define MAX_PARTS      256
 #define GREEN_RGB      78,521,149
 
@@ -22,6 +23,7 @@ typedef struct v2{
 
 WINDOW *CreateWindow(int width, int height, int ix, int iy);
 v2 SpawnPowerUp(int xConstraint, int yConstraint);
+bool GameIsOver();
 
 v2 parts[MAX_PARTS];
 v2 partsBuffer[MAX_PARTS];
@@ -32,9 +34,9 @@ int main(int argc, char **argv){
 	int width, height, startx,starty = 0;
 	bool canRotate = true;
 	WINDOW *gameWindow;
-	v2 playerDir   = {0};
+	v2 playerDir   = {1,0};
 	v2 powerUpPos  = {0};
-	float rotation = 0;
+	//float rotation = 0;
 	struct timespec start,stop;
 
 	initscr();
@@ -71,23 +73,27 @@ int main(int argc, char **argv){
 	for(;;){
 		clock_gettime(CLOCK_MONOTONIC,&start);
 		int input       = getch();
-		//TODO: better movement
 		if(input        == 'e') break;
-		if(input        == 'l' && canRotate) {
-			rotation +=(float)(M_PI/2); 
-			canRotate = false; 
-		}
-		if(input        == 'h' && canRotate) {
-			rotation -=(float)(M_PI/2);
+		if(GameIsOver()) break;
+		if((input == 'w' || input == 's') && canRotate && !(int)(playerDir.y)) {
+			//rotation +=(float)(M_PI/2); 
 			canRotate = false;
+			playerDir.y = (input == 'w') * -1 + (input == 's') * 1;
+			playerDir.x = 0;
+		}
+		if((input == 'a' || input == 'd') && canRotate  && !(int)(playerDir.x)) {
+			//rotation -=(float)(M_PI/2);
+			canRotate = false;
+			playerDir.x = (input == 'a') * -1 + (input == 'd') * 1;
+			playerDir.y = 0;
 		}
 
-		playerDir        = (v2) {cosf(rotation), sinf(rotation)};
+		//playerDir        = (v2) {cosf(rotation), sinf(rotation)};
 		werase(gameWindow);
 		box(gameWindow,0,0);
 
-		parts[0].x += playerDir.x * PLAYER_SPEED;
-		parts[0].y += playerDir.y * PLAYER_SPEED;
+		parts[0].x += playerDir.x * (PLAYER_SPEED + (input == 'f') * SPEED_BOOST);
+		parts[0].y += playerDir.y * (PLAYER_SPEED + (input == 'f') * SPEED_BOOST);
 		
 		if((int)(parts[0].x) == (int)(powerUpPos.x) && (int)(parts[0].y) == (int)(powerUpPos.y) ){
 			powerUpPos = SpawnPowerUp(width-2, height-2);
@@ -155,8 +161,22 @@ v2 SpawnPowerUp(int xConstraint, int yConstraint){
 	
 }
 
+bool GameIsOver(){
+	for(int i = 1; i < currentLenght; ++i){
+		if((int)(parts[0].x) == (int)(parts[i].x) && (int)(parts[0].y) == (int)(parts[i].y)) return true; 
+	}
 
+	return false;		
 
+}
+
+void UpdateAndDrawGameplay(){
+
+}
+
+void UpdateAndDrawGameOver(){
+
+}
 
 
 
