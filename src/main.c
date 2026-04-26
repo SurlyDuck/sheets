@@ -5,7 +5,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <math.h>
 #include <stdbool.h>
 #include <assert.h>
 
@@ -24,7 +23,7 @@ typedef struct v2{
 typedef enum state{
 	GAMEPLAY      = 0,
 	GAME_OVER     = 1,
-	EXITING_GAME  = 3
+	EXITING_GAME  = 2
 }state;
 
 WINDOW *CreateWindow(int width, int height, int ix, int iy);
@@ -39,7 +38,7 @@ v2 partsBuffer[MAX_PARTS];
 v2 playerDir   = {1,0};
 v2 powerUpPos  = {0};
 state currentGameState = GAMEPLAY;
-WINDOW *gameWindow;
+WINDOW *gameWindow = NULL;
 int currentLenght = 3;
 int width, height, startx,starty = 0;
 bool canRotate = true;
@@ -54,7 +53,6 @@ int main(int argc, char **argv){
 	width  /= 2;
 	InitGameWindow();
 	timeout(FRAME_PERIOD_MS);
-
 	for(;;){
 		switch(currentGameState){
 			case GAMEPLAY:
@@ -89,19 +87,19 @@ WINDOW *CreateWindow(int width, int height, int ix, int iy){
 
 v2 SpawnPowerUp(int xConstraint, int yConstraint){
 	srand(arc4random());	
-	v2 powerUpPos = {0};
-	powerUpPos.x = (int)(1+rand() / (RAND_MAX / (xConstraint)));
-	powerUpPos.y = (int)(1+rand() / (RAND_MAX / (yConstraint)));
+	v2 _powerUpPos = {0};
+	_powerUpPos.x = (int)(1+rand() / (RAND_MAX / (xConstraint)));
+	_powerUpPos.y = (int)(1+rand() / (RAND_MAX / (yConstraint)));
 
 	for(int i = 0; i < currentLenght; i++){
-		if((int)(parts[i].x) == (int)(powerUpPos.x) && (int)(parts[i].y) == (int)(powerUpPos.y)){
+		if((int)(parts[i].x) == (int)(_powerUpPos.x) && (int)(parts[i].y) == (int)(_powerUpPos.y)){
 			i = 0;
-			powerUpPos.x = (int)(1+rand() / (RAND_MAX / (xConstraint)));
-			powerUpPos.y = (int)(1+rand() / (RAND_MAX / (yConstraint)));
+			_powerUpPos.x = (int)(1+rand() / (RAND_MAX / (xConstraint)));
+			_powerUpPos.y = (int)(1+rand() / (RAND_MAX / (yConstraint)));
 		
 		}
 	}
-	return powerUpPos;
+	return _powerUpPos;
 	
 }
 
@@ -113,12 +111,12 @@ bool IsGameOver(){
 	return false;		
 
 }
-
 state UpdateAndDrawGameplay(){
 	clock_gettime(CLOCK_MONOTONIC,&start);
 	int input       = getch();
 	if(input        == 'e') return EXITING_GAME;
 	if(IsGameOver()) return GAME_OVER;
+	
 	if((input == 'w' || input == 's') && canRotate && !(int)(playerDir.y)) {
 		canRotate = false;
 		playerDir.y = (input == 'w') * -1 + (input == 's') * 1;
@@ -192,17 +190,23 @@ void InitCurses(){
 }
 
 void InitGameWindow(){
-	gameWindow = CreateWindow(width,height,startx,starty+TOP_CROP_SIZE);
-	wattron(gameWindow,COLOR_PAIR(1));
 	v2 playerPos = {width/2,(starty+height/1.5)};
 	currentLenght = 3;
 	for(int i =0; i < MAX_PARTS; ++i){
 		parts[i]    = playerPos;
 		parts[i].x -= i;
 	}
-	powerUpPos = SpawnPowerUp(width-2,height-2);
-   memcpy( partsBuffer, parts, sizeof(parts));
 
+	memcpy( partsBuffer, parts, sizeof(parts));
+
+	if(gameWindow == NULL){
+		gameWindow = CreateWindow(width,height,startx,starty+TOP_CROP_SIZE);
+		wattron(gameWindow,COLOR_PAIR(1));
+	}else(werase(gameWindow));
+	
+	wrefresh(gameWindow);
+	powerUpPos = SpawnPowerUp(width-2,height-2);
+	playerDir  = (v2) {1,0};
 }
 
 
