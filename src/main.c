@@ -22,99 +22,55 @@ typedef struct v2{
 }v2;
 
 typedef enum state{
-	GAMEPLAY   = 0,
-	GAME_OVER  = 1
+	GAMEPLAY      = 0,
+	GAME_OVER     = 1,
+	EXITING_GAME  = 3
 }state;
 
 WINDOW *CreateWindow(int width, int height, int ix, int iy);
 v2 SpawnPowerUp(int xConstraint, int yConstraint);
 void InitCurses();
+void InitGameWindow();
 bool IsGameOver();
+state UpdateAndDrawGameplay();
 
 v2 parts[MAX_PARTS];
 v2 partsBuffer[MAX_PARTS];
+v2 playerDir   = {1,0};
+v2 powerUpPos  = {0};
+state currentGameState = GAMEPLAY;
+WINDOW *gameWindow;
 int currentLenght = 3;
 int width, height, startx,starty = 0;
+bool canRotate = true;
 const char *gameMsg = "Welcome to Snake Sheet! Press 'e' to quit";
+struct timespec start,stop;
 
 int main(int argc, char **argv){
-	bool canRotate = true;
-	WINDOW *gameWindow;
-	v2 playerDir   = {1,0};
-	v2 powerUpPos  = {0};
-	struct timespec start,stop;
-
 	InitCurses();
 
 	startx  = (width - width/2)/2;
 	height /= 1.5;
 	width  /= 2;
-	gameWindow = CreateWindow(width,height,startx,starty+TOP_CROP_SIZE);
-	wattron(gameWindow,COLOR_PAIR(1));
-	v2 playerPos = {width/2,(starty+height/1.5)};
-	for(int i =0; i < MAX_PARTS; ++i){
-		parts[i]    = playerPos;
-		parts[i].x -= i;
-	}
-	powerUpPos = SpawnPowerUp(width-2,height-2);
-   memcpy( partsBuffer, parts, sizeof(parts));
-	
+	InitGameWindow();
 	timeout(FRAME_PERIOD_MS);
 
 	for(;;){
-		clock_gettime(CLOCK_MONOTONIC,&start);
-		int input       = getch();
-		if(input        == 'e') break;
-		if(IsGameOver()) break;
-		if((input == 'w' || input == 's') && canRotate && !(int)(playerDir.y)) {
-			canRotate = false;
-			playerDir.y = (input == 'w') * -1 + (input == 's') * 1;
-			playerDir.x = 0;
+		switch(currentGameState){
+			case GAMEPLAY:
+				currentGameState = UpdateAndDrawGameplay();
+				break;
+			case GAME_OVER:
+				InitGameWindow();
+				currentGameState = GAMEPLAY;
+				break;
+			case EXITING_GAME:
+				goto CLOSING;
+				break;
+			default: break;
 		}
-		if((input == 'a' || input == 'd') && canRotate  && !(int)(playerDir.x)) {
-			canRotate = false;
-			playerDir.x = (input == 'a') * -1 + (input == 'd') * 1;
-			playerDir.y = 0;
-		}
-
-		werase(gameWindow);
-		box(gameWindow,0,0);
-
-		parts[0].x += playerDir.x * (PLAYER_SPEED + (input == 'f') * SPEED_BOOST);
-		parts[0].y += playerDir.y * (PLAYER_SPEED + (input == 'f') * SPEED_BOOST);
-		
-		if((int)(parts[0].x) == (int)(powerUpPos.x) && (int)(parts[0].y) == (int)(powerUpPos.y) ){
-			powerUpPos = SpawnPowerUp(width-2, height-2);
-			++currentLenght;
-		}
-
-		if((int)(parts[0].x) >= width-1) parts[0].x = 1;
-		if((int)(parts[0].x) < 1) parts[0].x = width-2;
-		if((int)(parts[0].y) >= height-1) parts[0].y = 1;
-		if((int)(parts[0].y) < 1) parts[0].y = height-2;
-
-		if((int)(partsBuffer[0].x) != (int)(parts[0].x) || (int)(partsBuffer[0].y) != (int)(parts[0].y)){
-			for (int i = 1; i < currentLenght; ++i){
-				parts[i].x = partsBuffer[i-1].x;
-				parts[i].y = partsBuffer[i-1].y;
-			}
-			memcpy( partsBuffer, parts, sizeof(parts));
-			canRotate = true;
-		}
-		for(int i =0; i < currentLenght; ++i) {
-			
-			mvwaddch(gameWindow,parts[i].y,parts[i].x,'@');
-		}
-		mvwaddch(gameWindow,powerUpPos.y,powerUpPos.x,ACS_DIAMOND);
-		wrefresh(gameWindow);
-
-		clock_gettime(CLOCK_MONOTONIC,&stop);
-		double elapsed   = (stop.tv_sec - start.tv_sec) + (stop.tv_nsec - start.tv_nsec)/1e9;
-		double remaining = (double)(FRAME_PERIOD_MS/1e3) - elapsed;
-		if (remaining > 0) sleep(remaining);
-		
 	}	
-
+CLOSING:
 	getch();
 	delwin(gameWindow);
 	endwin();
@@ -158,12 +114,63 @@ bool IsGameOver(){
 
 }
 
-void UpdateAndDrawGameplay(){
+state UpdateAndDrawGameplay(){
+	clock_gettime(CLOCK_MONOTONIC,&start);
+	int input       = getch();
+	if(input        == 'e') return EXITING_GAME;
+	if(IsGameOver()) return GAME_OVER;
+	if((input == 'w' || input == 's') && canRotate && !(int)(playerDir.y)) {
+		canRotate = false;
+		playerDir.y = (input == 'w') * -1 + (input == 's') * 1;
+		playerDir.x = 0;
+	}
+	if((input == 'a' || input == 'd') && canRotate  && !(int)(playerDir.x)) {
+		canRotate = false;
+		playerDir.x = (input == 'a') * -1 + (input == 'd') * 1;
+		playerDir.y = 0;
+	}
 
+	werase(gameWindow);
+	box(gameWindow,0,0);
+
+	parts[0].x += playerDir.x * (PLAYER_SPEED + (input == 'f') * SPEED_BOOST);
+	parts[0].y += playerDir.y * (PLAYER_SPEED + (input == 'f') * SPEED_BOOST);
+
+	if((int)(parts[0].x) == (int)(powerUpPos.x) && (int)(parts[0].y) == (int)(powerUpPos.y) ){
+		powerUpPos = SpawnPowerUp(width-2, height-2);
+		++currentLenght;
+	}
+
+	if((int)(parts[0].x) >= width-1) parts[0].x = 1;
+	if((int)(parts[0].x) < 1) parts[0].x = width-2;
+	if((int)(parts[0].y) >= height-1) parts[0].y = 1;
+	if((int)(parts[0].y) < 1) parts[0].y = height-2;
+
+	if((int)(partsBuffer[0].x) != (int)(parts[0].x) || (int)(partsBuffer[0].y) != (int)(parts[0].y)){
+		for (int i = 1; i < currentLenght; ++i){
+			parts[i].x = partsBuffer[i-1].x;
+			parts[i].y = partsBuffer[i-1].y;
+		}
+		memcpy( partsBuffer, parts, sizeof(parts));
+		canRotate = true;
+	}
+	for(int i =0; i < currentLenght; ++i) {
+		
+		mvwaddch(gameWindow,parts[i].y,parts[i].x,'@');
+	}
+	mvwaddch(gameWindow,powerUpPos.y,powerUpPos.x,ACS_DIAMOND);
+	wrefresh(gameWindow);
+
+	clock_gettime(CLOCK_MONOTONIC,&stop);
+	double elapsed   = (stop.tv_sec - start.tv_sec) + (stop.tv_nsec - start.tv_nsec)/1e9;
+	double remaining = (double)(FRAME_PERIOD_MS/1e3) - elapsed;
+	if (remaining > 0) sleep(remaining);
+	
+	return GAMEPLAY;
 }
 
 void UpdateAndDrawGameOver(){
-
+	//TODO
 }
 
 void InitCurses(){
@@ -184,9 +191,18 @@ void InitCurses(){
 	refresh();
 }
 
+void InitGameWindow(){
+	gameWindow = CreateWindow(width,height,startx,starty+TOP_CROP_SIZE);
+	wattron(gameWindow,COLOR_PAIR(1));
+	v2 playerPos = {width/2,(starty+height/1.5)};
+	currentLenght = 3;
+	for(int i =0; i < MAX_PARTS; ++i){
+		parts[i]    = playerPos;
+		parts[i].x -= i;
+	}
+	powerUpPos = SpawnPowerUp(width-2,height-2);
+   memcpy( partsBuffer, parts, sizeof(parts));
 
-
-
-
+}
 
 
