@@ -8,11 +8,11 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#define TOP_CROP_SIZE         5
-#define FRAME_PERIOD_MS      16
-#define PLAYER_SPEED          .1
-#define SPEED_BOOST           .5
-#define MAX_PARTS           256
+#define TOP_CROP_SIZE          5
+#define FRAME_PERIOD_MS       16
+#define PLAYER_SPEED            .1
+#define SPEED_BOOST             .5
+#define MAX_PARTS           2048
 #define GREEN_RGB           78,521,149
 
 typedef struct v2{
@@ -26,10 +26,11 @@ typedef enum state{
 	EXITING_GAME  = 2
 }state;
 
-WINDOW *CreateWindow(int width, int height, int ix, int iy);
+WINDOW *CreateWindow(int gameWidth, int gameHeight, int ix, int iy);
 v2 SpawnPowerUp(int xConstraint, int yConstraint);
 void InitCurses();
 void InitGameWindow();
+void DrawInfoWindow();
 bool IsGameOver();
 state UpdateAndDrawGameplay();
 
@@ -39,8 +40,9 @@ v2 playerDir   = {1,0};
 v2 powerUpPos  = {0};
 state currentGameState = GAMEPLAY;
 WINDOW *gameWindow = NULL;
+WINDOW *infoWindow = NULL;
 int currentLenght = 3;
-int width, height, startx,starty = 0;
+int gameWidth, gameHeight, startx,starty = 0;
 bool canRotate = true;
 const char *gameMsg = "Welcome to Snake Sheet! Press 'e' to quit";
 struct timespec start,stop;
@@ -48,10 +50,12 @@ struct timespec start,stop;
 int main(int argc, char **argv){
 	InitCurses();
 
-	startx  = (width - width/2)/2;
-	height /= 1.5;
-	width  /= 2;
+	startx  = (gameWidth - gameWidth/2)/2;
+	starty  = TOP_CROP_SIZE;
+	gameHeight /= 1.5;
+	gameWidth  /= 2;
 	InitGameWindow();
+	DrawInfoWindow();
 	timeout(FRAME_PERIOD_MS);
 	for(;;){
 		switch(currentGameState){
@@ -71,12 +75,13 @@ int main(int argc, char **argv){
 CLOSING:
 	getch();
 	delwin(gameWindow);
+	delwin(infoWindow);
 	endwin();
 
 }
 
-WINDOW *CreateWindow(int width, int height, int ix, int iy){
-	WINDOW *localWin = newwin(height,width,iy,ix);
+WINDOW *CreateWindow(int gameWidth, int gameHeight, int ix, int iy){
+	WINDOW *localWin = newwin(gameHeight,gameWidth,iy,ix);
 	
 	box(localWin,0,0);
 	wrefresh(localWin);
@@ -135,14 +140,14 @@ state UpdateAndDrawGameplay(){
 	parts[0].y += playerDir.y * (PLAYER_SPEED + (input == 'f') * SPEED_BOOST);
 
 	if((int)(parts[0].x) == (int)(powerUpPos.x) && (int)(parts[0].y) == (int)(powerUpPos.y) ){
-		powerUpPos = SpawnPowerUp(width-2, height-2);
+		powerUpPos = SpawnPowerUp(gameWidth-2, gameHeight-2);
 		++currentLenght;
 	}
 
-	if((int)(parts[0].x) >= width-1) parts[0].x = 1;
-	if((int)(parts[0].x) < 1) parts[0].x = width-2;
-	if((int)(parts[0].y) >= height-1) parts[0].y = 1;
-	if((int)(parts[0].y) < 1) parts[0].y = height-2;
+	if((int)(parts[0].x) >= gameWidth-1) parts[0].x = 1;
+	if((int)(parts[0].x) < 1) parts[0].x = gameWidth-2;
+	if((int)(parts[0].y) >= gameHeight-1) parts[0].y = 1;
+	if((int)(parts[0].y) < 1) parts[0].y = gameHeight-2;
 
 	if((int)(partsBuffer[0].x) != (int)(parts[0].x) || (int)(partsBuffer[0].y) != (int)(parts[0].y)){
 		for (int i = 1; i < currentLenght; ++i){
@@ -173,7 +178,9 @@ void UpdateAndDrawGameOver(){
 
 void InitCurses(){
 	initscr();
+	getmaxyx(stdscr,gameHeight,gameWidth);
 	assert(has_colors());
+	assert(gameHeight >= 28);
 	start_color(); 
 	noecho();
 	init_color(COLOR_BLACK,0,0,0);
@@ -181,16 +188,15 @@ void InitCurses(){
 	init_pair(1,COLOR_GREEN, COLOR_BLACK);
 	raw();
 	curs_set(0);
-	getmaxyx(stdscr,height,width);
-	attron(A_BOLD | COLOR_PAIR(1));
-	mvprintw(0, (width-strlen(gameMsg))/2,gameMsg);
-	attroff(A_BOLD);
+	//attron(A_BOLD | COLOR_PAIR(1));
+	//mvprintw(0, (gameWidth-strlen(gameMsg))/2,gameMsg);
+	//attroff(A_BOLD);
 
 	refresh();
 }
 
 void InitGameWindow(){
-	v2 playerPos = {width/2,(starty+height/1.5)};
+	v2 playerPos = {gameWidth/2,(gameHeight/2)};
 	currentLenght = 3;
 	for(int i =0; i < MAX_PARTS; ++i){
 		parts[i]    = playerPos;
@@ -200,13 +206,38 @@ void InitGameWindow(){
 	memcpy( partsBuffer, parts, sizeof(parts));
 
 	if(gameWindow == NULL){
-		gameWindow = CreateWindow(width,height,startx,starty+TOP_CROP_SIZE);
+		gameWindow = CreateWindow(gameWidth,gameHeight,startx,starty);
 		wattron(gameWindow,COLOR_PAIR(1));
 	}else(werase(gameWindow));
 	
 	wrefresh(gameWindow);
-	powerUpPos = SpawnPowerUp(width-2,height-2);
+	powerUpPos = SpawnPowerUp(gameWidth-2,gameHeight-2);
 	playerDir  = (v2) {1,0};
 }
+
+void DrawInfoWindow(){
+	const char *msg = "INFO";
+
+	if(infoWindow == NULL){
+		infoWindow = CreateWindow(gameWidth,5,startx,starty+gameHeight);
+		wattron(infoWindow,COLOR_PAIR(1));
+	}werase(infoWindow);
+
+		box(infoWindow,0,0);
+		mvwprintw(infoWindow,0,(gameWidth-strlen(msg))/2,msg);
+		mvwprintw(infoWindow,1,1,"Mov.: WASD");
+		mvwprintw(infoWindow,2,1,"Exit: E");
+		wrefresh(infoWindow);
+	
+}
+
+
+
+
+
+
+
+
+
 
 
