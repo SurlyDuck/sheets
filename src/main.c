@@ -8,12 +8,15 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#define TOP_CROP_SIZE          5
-#define FRAME_PERIOD_MS       16
-#define PLAYER_SPEED            .1
-#define SPEED_BOOST             .5
+#define TOP_CROP_SIZE       9
+#define FRAME_PERIOD_MS     16
+#define PLAYER_SPEED        .1
+#define SPEED_BOOST         .5
 #define MAX_PARTS           2048
 #define GREEN_RGB           78,521,149
+#define PAUSE_WINDOW_WIDTH  24
+#define PAUSE_WINDOW_HEIGHT 8
+#define INFO_PANEL_HEIGHT   5 
 
 typedef struct v2{
 	float x;
@@ -23,7 +26,8 @@ typedef struct v2{
 typedef enum state{
 	GAMEPLAY      = 0,
 	GAME_OVER     = 1,
-	EXITING_GAME  = 2
+	EXITING_GAME  = 2,
+	PAUSE         = 3
 }state;
 
 WINDOW *CreateWindow(int gameWidth, int gameHeight, int ix, int iy);
@@ -31,30 +35,43 @@ v2 SpawnPowerUp(int xConstraint, int yConstraint);
 void InitCurses();
 void InitGameWindow();
 void DrawInfoWindow();
+void DrawTitleScreen();
 bool IsGameOver();
 state UpdateAndDrawGameplay();
+state UpdateAndDrawPauseScreen();
 
 v2 parts[MAX_PARTS];
 v2 partsBuffer[MAX_PARTS];
-v2 playerDir   = {1,0};
-v2 powerUpPos  = {0};
-state currentGameState = GAMEPLAY;
-WINDOW *gameWindow = NULL;
-WINDOW *infoWindow = NULL;
-int currentLenght = 3;
+v2 playerDir                             = {1,0};
+v2 powerUpPos                            = {0};
+state currentGameState                   = GAMEPLAY;
+WINDOW *gameWindow                       = NULL;
+WINDOW *infoWindow                       = NULL;
+WINDOW *pauseWindow                      = NULL;
+int currentLenght                        = 3;
 int gameWidth, gameHeight, startx,starty = 0;
-bool canRotate = true;
-const char *gameMsg = "Welcome to Snake Sheet! Press 'e' to quit";
+bool canRotate                           = true;
+const char *gameMsg                      = "Welcome to Snake Sheet! Press 'e' to quit";
 struct timespec start,stop;
 
+char titleScreen[] = 
+                                             
+" ,---.  ,--.  ,--.  ,---.  ,--. ,--.,------. \0" 
+"'   .-' |  ,'.|  | /  O  \\ |  .'   /|  .---'  \0" 
+"`.  `-. |  |' '  ||  .-.  ||  .   ' |  `--,    \0" 
+".-'    ||  | `   ||  | |  ||  |\\   \\|  `---. \0" 
+"`-----' `--'  `--'`--' `--'`--' '--'`------'   \0";
+//from patorjk.com ASCII generator
+                                             
 int main(int argc, char **argv){
 	InitCurses();
 
 	startx  = (gameWidth - gameWidth/2)/2;
 	starty  = TOP_CROP_SIZE;
-	gameHeight /= 1.5;
+	gameHeight /= 2;
 	gameWidth  /= 2;
 	InitGameWindow();
+	DrawTitleScreen();
 	DrawInfoWindow();
 	timeout(FRAME_PERIOD_MS);
 	for(;;){
@@ -69,6 +86,9 @@ int main(int argc, char **argv){
 			case EXITING_GAME:
 				goto CLOSING;
 				break;
+			case PAUSE:
+				currentGameState = UpdateAndDrawPauseScreen();
+				break;
 			default: break;
 		}
 	}	
@@ -76,6 +96,7 @@ CLOSING:
 	getch();
 	delwin(gameWindow);
 	delwin(infoWindow);
+	delwin(pauseWindow);
 	endwin();
 
 }
@@ -119,25 +140,26 @@ bool IsGameOver(){
 state UpdateAndDrawGameplay(){
 	clock_gettime(CLOCK_MONOTONIC,&start);
 	int input       = getch();
-	if(input        == 'e') return EXITING_GAME;
+	if(input        == 'p' || input == 'P') return PAUSE;
+	if(input        == 'e' || input == 'E') return EXITING_GAME;
 	if(IsGameOver()) return GAME_OVER;
 	
-	if((input == 'w' || input == 's') && canRotate && !(int)(playerDir.y)) {
+	if((input == 'w' || input == 's' || input == 'W' || input == 'S') && canRotate && !(int)(playerDir.y)) {
 		canRotate = false;
-		playerDir.y = (input == 'w') * -1 + (input == 's') * 1;
+		playerDir.y = (input == 'w' || input == 'W') * -1 + (input == 's' || input == 'S') * 1;
 		playerDir.x = 0;
 	}
-	if((input == 'a' || input == 'd') && canRotate  && !(int)(playerDir.x)) {
+	if((input == 'a' || input == 'd' || input == 'A' || input == 'D') && canRotate  && !(int)(playerDir.x)) {
 		canRotate = false;
-		playerDir.x = (input == 'a') * -1 + (input == 'd') * 1;
+		playerDir.x = (input == 'a' || input == 'A') * -1 + (input == 'd' || input == 'D') * 1;
 		playerDir.y = 0;
 	}
 
 	werase(gameWindow);
 	box(gameWindow,0,0);
 
-	parts[0].x += playerDir.x * (PLAYER_SPEED + (input == 'f') * SPEED_BOOST);
-	parts[0].y += playerDir.y * (PLAYER_SPEED + (input == 'f') * SPEED_BOOST);
+	parts[0].x += playerDir.x * (PLAYER_SPEED + (input == 'f' || input == 'F') * SPEED_BOOST);
+	parts[0].y += playerDir.y * (PLAYER_SPEED + (input == 'f' || input == 'F') * SPEED_BOOST);
 
 	if((int)(parts[0].x) == (int)(powerUpPos.x) && (int)(parts[0].y) == (int)(powerUpPos.y) ){
 		powerUpPos = SpawnPowerUp(gameWidth-2, gameHeight-2);
@@ -180,7 +202,7 @@ void InitCurses(){
 	initscr();
 	getmaxyx(stdscr,gameHeight,gameWidth);
 	assert(has_colors());
-	assert(gameHeight >= 28);
+	assert(gameHeight >= 27);
 	start_color(); 
 	noecho();
 	init_color(COLOR_BLACK,0,0,0);
@@ -188,9 +210,6 @@ void InitCurses(){
 	init_pair(1,COLOR_GREEN, COLOR_BLACK);
 	raw();
 	curs_set(0);
-	//attron(A_BOLD | COLOR_PAIR(1));
-	//mvprintw(0, (gameWidth-strlen(gameMsg))/2,gameMsg);
-	//attroff(A_BOLD);
 
 	refresh();
 }
@@ -216,25 +235,77 @@ void InitGameWindow(){
 }
 
 void DrawInfoWindow(){
-	const char *msg = "INFO";
+	const char *windowTitle = "INFO";
 
 	if(infoWindow == NULL){
-		infoWindow = CreateWindow(gameWidth,5,startx,starty+gameHeight);
+		infoWindow = CreateWindow(gameWidth,INFO_PANEL_HEIGHT,startx,starty+gameHeight);
 		wattron(infoWindow,COLOR_PAIR(1));
 	}werase(infoWindow);
 
 		box(infoWindow,0,0);
-		mvwprintw(infoWindow,0,(gameWidth-strlen(msg))/2,msg);
-		mvwprintw(infoWindow,1,1,"Mov.: WASD");
-		mvwprintw(infoWindow,2,1,"Exit: E");
+		mvwprintw(infoWindow,0,(gameWidth-strlen(windowTitle))/2,windowTitle);
+		mvwprintw(infoWindow,1,1,"%s: %*s","WASD", 5, "Move");
+		mvwprintw(infoWindow,2,1,"%s: %*s","E", 8, "Exit");
+		mvwprintw(infoWindow,1,gameWidth-10,"F:  Boost");
+		mvwprintw(infoWindow,2,gameWidth-10,"P:  Pause");
 		wrefresh(infoWindow);
 	
 }
 
+state UpdateAndDrawPauseScreen(){
+	int input = getch();
+	const char *windowTitle  = "PAUSED";
 
+	if(input == 'E' || input == 'e') return EXITING_GAME;
+	if(input == 'P' || input == 'p'){
+		werase(pauseWindow); 
 
+	   wborder(pauseWindow, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
+		wrefresh(pauseWindow);
+		return GAMEPLAY;
+	}
+	if(pauseWindow == NULL){
+		pauseWindow   = CreateWindow(PAUSE_WINDOW_WIDTH, PAUSE_WINDOW_HEIGHT,startx+(gameWidth-PAUSE_WINDOW_WIDTH)*.5,(starty) + (gameHeight-PAUSE_WINDOW_HEIGHT)*.5); 
+		wattron(pauseWindow,COLOR_PAIR(1));
+	}else werase(pauseWindow);
 
+	box(pauseWindow,0,0);
+	mvwprintw(pauseWindow,0,(PAUSE_WINDOW_WIDTH-strlen(windowTitle))*.5,windowTitle);
+	mvwprintw(pauseWindow,1,1,"Snake by Lucas!");
+	mvwprintw(pauseWindow,2,1,"Check my other games");
+	mvwprintw(pauseWindow,3,1,"Have fun!");
+	mvwprintw(pauseWindow,PAUSE_WINDOW_HEIGHT - 2,PAUSE_WINDOW_WIDTH-5,"2026");
+	wrefresh(pauseWindow);
 
+	return PAUSE;
+
+}
+
+void DrawTitleScreen(){
+	v2 cursorPos = {0};
+	int titleWidth = 0;
+	int cursorInitialPosX = 0;
+
+	for(int i = 0; titleScreen[i] != '\0'; ++i) ++titleWidth;
+	cursorInitialPosX = (startx) + (gameWidth - titleWidth)*.5;
+	cursorPos.y = starty - 5; 
+	cursorPos.x = cursorInitialPosX ;
+	
+	attron(COLOR_PAIR(1));
+	for(int i = 0; i < sizeof(titleScreen)/sizeof(char); ++i){
+		if (titleScreen[i] == '\0') {
+			++cursorPos.y;
+			cursorPos.x = cursorInitialPosX;
+			refresh();
+			continue;
+		}
+		mvaddch(cursorPos.y,cursorPos.x,titleScreen[i]);
+		++cursorPos.x;
+	}
+	attroff(COLOR_PAIR(1));
+	refresh();
+
+}
 
 
 
