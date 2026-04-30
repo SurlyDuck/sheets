@@ -8,15 +8,17 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#define TOP_CROP_SIZE       9
-#define FRAME_PERIOD_MS     16
-#define PLAYER_SPEED        .1
-#define SPEED_BOOST         .5
-#define MAX_PARTS           2048
-#define GREEN_RGB           78,521,149
-#define PAUSE_WINDOW_WIDTH  24
-#define PAUSE_WINDOW_HEIGHT 8
-#define INFO_PANEL_HEIGHT   5 
+#define TOP_CROP_SIZE          6
+#define FRAME_PERIOD_MS        16
+#define PLAYER_SPEED           .1
+#define SPEED_BOOST            .5
+#define MAX_PARTS              2048
+#define GREEN_RGB              78,521,149
+#define PAUSE_WINDOW_WIDTH     24
+#define PAUSE_WINDOW_HEIGHT    8
+#define NEW_GAME_WINDOW_WIDTH  24
+#define NEW_GAME_WINDOW_HEIGHT 10
+#define INFO_PANEL_HEIGHT      5 
 
 typedef struct v2{
 	float x;
@@ -27,7 +29,8 @@ typedef enum state{
 	GAMEPLAY      = 0,
 	GAME_OVER     = 1,
 	EXITING_GAME  = 2,
-	PAUSE         = 3
+	PAUSE         = 3,
+	NEW_GAME      = 4
 }state;
 
 WINDOW *CreateWindow(int gameWidth, int gameHeight, int ix, int iy);
@@ -39,19 +42,22 @@ void DrawTitleScreen();
 bool IsGameOver();
 state UpdateAndDrawGameplay();
 state UpdateAndDrawPauseScreen();
+state UpdateAndDrawNewGameScreen();
 
 v2 parts[MAX_PARTS];
 v2 partsBuffer[MAX_PARTS];
-v2 playerDir                             = {1,0};
-v2 powerUpPos                            = {0};
-state currentGameState                   = GAMEPLAY;
-WINDOW *gameWindow                       = NULL;
-WINDOW *infoWindow                       = NULL;
-WINDOW *pauseWindow                      = NULL;
-int currentLenght                        = 3;
-int gameWidth, gameHeight, startx,starty = 0;
-bool canRotate                           = true;
-const char *gameMsg                      = "Welcome to Snake Sheet! Press 'e' to quit";
+v2 playerDir                               = {1,0};
+v2 powerUpPos                              = {0};
+state currentGameState                     = GAMEPLAY;
+WINDOW *gameWindow                         = NULL;
+WINDOW *infoWindow                         = NULL;
+WINDOW *pauseWindow                        = NULL;
+WINDOW *newGameWindow                      = NULL;
+int currentLenght                          = 3;
+int gameWidth, gameHeight, startx,starty   = 0;
+bool canRotate                             = true;
+bool enabledWalls, enabledIncrementalSpeed = false;  
+const char *gameMsg                        = "Welcome to Snake Sheet! Press 'e' to quit";
 struct timespec start,stop;
 
 char titleScreen[] = 
@@ -89,6 +95,8 @@ int main(int argc, char **argv){
 			case PAUSE:
 				currentGameState = UpdateAndDrawPauseScreen();
 				break;
+			case NEW_GAME:
+				currentGameState = UpdateAndDrawNewGameScreen();
 			default: break;
 		}
 	}	
@@ -141,7 +149,9 @@ state UpdateAndDrawGameplay(){
 	clock_gettime(CLOCK_MONOTONIC,&start);
 	int input       = getch();
 	if(input        == 'p' || input == 'P') return PAUSE;
+	if(input        == 'r' || input == 'R') return GAME_OVER;
 	if(input        == 'e' || input == 'E') return EXITING_GAME;
+	if(input        == 'n' || input == 'N') return NEW_GAME;
 	if(IsGameOver()) return GAME_OVER;
 	
 	if((input == 'w' || input == 's' || input == 'W' || input == 'S') && canRotate && !(int)(playerDir.y)) {
@@ -202,7 +212,7 @@ void InitCurses(){
 	initscr();
 	getmaxyx(stdscr,gameHeight,gameWidth);
 	assert(has_colors());
-	assert(gameHeight >= 27);
+	assert(gameHeight >= 25);
 	start_color(); 
 	noecho();
 	init_color(COLOR_BLACK,0,0,0);
@@ -246,8 +256,10 @@ void DrawInfoWindow(){
 		mvwprintw(infoWindow,0,(gameWidth-strlen(windowTitle))/2,windowTitle);
 		mvwprintw(infoWindow,1,1,"%s: %*s","WASD", 5, "Move");
 		mvwprintw(infoWindow,2,1,"%s: %*s","E", 8, "Exit");
-		mvwprintw(infoWindow,1,gameWidth-10,"F:  Boost");
-		mvwprintw(infoWindow,2,gameWidth-10,"P:  Pause");
+		mvwprintw(infoWindow,3,1,"%s: %*s","N", 12, "New Game");
+		mvwprintw(infoWindow,1,gameWidth-12,"F:  Boost");
+		mvwprintw(infoWindow,2,gameWidth-12,"P:  Pause");
+		mvwprintw(infoWindow,3,gameWidth-12,"R:  Restart");
 		wrefresh(infoWindow);
 	
 }
@@ -306,6 +318,40 @@ void DrawTitleScreen(){
 	refresh();
 
 }
+
+state UpdateAndDrawNewGameScreen(){
+	int input = getch();
+   const char *windowTitle  = "New Game";
+
+	if(input == 'E' || input == 'e') return EXITING_GAME;
+   if(input == 'P' || input == 'p'){
+   	werase(newGameWindow); 
+      wborder(newGameWindow, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
+   	wrefresh(newGameWindow);
+   	return GAMEPLAY;
+   }
+   if(newGameWindow == NULL){
+   	newGameWindow   = CreateWindow(NEW_GAME_WINDOW_WIDTH, NEW_GAME_WINDOW_HEIGHT,startx+(gameWidth-NEW_GAME_WINDOW_WIDTH)*.5,(starty) + (gameHeight-NEW_GAME_WINDOW_HEIGHT)*.5); 
+   	wattron(newGameWindow,COLOR_PAIR(1));
+   }else werase(newGameWindow);
+
+   box(newGameWindow,0,0);
+   mvwprintw(newGameWindow,0,(NEW_GAME_WINDOW_WIDTH-strlen(windowTitle))*.5,windowTitle);
+   mvwprintw(newGameWindow,1,1,"(%c) Random Walls",((enabledWalls) ? '*' : ' '));
+   mvwprintw(newGameWindow,2,1,"(%c) Increment Speed",((enabledIncrementalSpeed) ? '*' : ' '));
+   mvwprintw(newGameWindow,NEW_GAME_WINDOW_HEIGHT - 2,NEW_GAME_WINDOW_WIDTH-5,"2026");
+	wrefresh(newGameWindow);
+
+	return NEW_GAME;	
+}
+
+
+
+
+
+
+
+
 
 
 
