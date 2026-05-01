@@ -16,8 +16,6 @@
 #define GREEN_RGB              78,521,149
 #define PAUSE_WINDOW_WIDTH     24
 #define PAUSE_WINDOW_HEIGHT    8
-#define NEW_GAME_WINDOW_WIDTH  30
-#define NEW_GAME_WINDOW_HEIGHT 10
 #define INFO_PANEL_HEIGHT      5 
 
 typedef struct v2{
@@ -30,7 +28,6 @@ typedef enum state{
 	GAME_OVER     = 1,
 	EXITING_GAME  = 2,
 	PAUSE         = 3,
-	OPTIONS      = 4
 }state;
 
 WINDOW *CreateWindow(int gameWidth, int gameHeight, int ix, int iy);
@@ -55,9 +52,7 @@ WINDOW *pauseWindow                        = NULL;
 WINDOW *newGameWindow                      = NULL;
 int currentLenght                          = 3;
 int gameWidth, gameHeight, startx,starty   = 0;
-int newGameWindowSelection                 = 0;
 bool canRotate                             = true;
-bool enabledWalls, enabledIncrementalSpeed = false;  
 const char *gameMsg                        = "Welcome to Snake Sheet! Press 'e' to quit";
 struct timespec start,stop;
 
@@ -95,9 +90,6 @@ int main(int argc, char **argv){
 				break;
 			case PAUSE:
 				currentGameState = UpdateAndDrawPauseScreen();
-				break;
-			case OPTIONS:
-				currentGameState = UpdateAndDrawNewGameScreen();
 				break;
 			default: break;
 		}
@@ -153,7 +145,6 @@ state UpdateAndDrawGameplay(){
 	if(input        == 'p' || input == 'P') return PAUSE;
 	if(input        == 'r' || input == 'R') return GAME_OVER;
 	if(input        == 'e' || input == 'E') return EXITING_GAME;
-	if(input        == 'n' || input == 'N') return OPTIONS;
 	if(IsGameOver()) return GAME_OVER;
 	
 	if((input == 'w' || input == 's' || input == 'W' || input == 'S') && canRotate && !(int)(playerDir.y)) {
@@ -258,10 +249,8 @@ void DrawInfoWindow(){
 		mvwprintw(infoWindow,0,(gameWidth-strlen(windowTitle))/2,windowTitle);
 		mvwprintw(infoWindow,1,1,"%s: %*s","WASD", 5, "Move");
 		mvwprintw(infoWindow,2,1,"%s: %*s","E", 8, "Exit");
-		mvwprintw(infoWindow,3,1,"%s: %*s","N", 12, "New Game");
 		mvwprintw(infoWindow,1,gameWidth-12,"F:  Boost");
 		mvwprintw(infoWindow,2,gameWidth-12,"P:  Pause");
-		mvwprintw(infoWindow,3,gameWidth-12,"R:  Restart");
 		wrefresh(infoWindow);
 	
 }
@@ -321,58 +310,3 @@ void DrawTitleScreen(){
 	refresh();
 
 }
-
-state UpdateAndDrawNewGameScreen(){
-   wtimeout(newGameWindow,FRAME_PERIOD_MS);
-	const char *windowTitle  = "New Game";
-	const int  choices       = 2;
-	int input                = wgetch(newGameWindow);
-	//TODO: this is very bad, needs refactoring.
-	//i'm very sorry
-	if(input == KEY_UP || input == 'W' || input == 'w')    ++newGameWindowSelection;
-	if(input == KEY_DOWN || input == 'S' || input == 's')  --newGameWindowSelection;
-	if(input == 'c' || input == 'C') {
-		if(newGameWindowSelection == 0) enabledWalls = !enabledWalls;
-		if(newGameWindowSelection == 1) enabledIncrementalSpeed = !enabledIncrementalSpeed;
-	}
-	if(newGameWindowSelection > choices-1)    newGameWindowSelection = 0;
-	if(newGameWindowSelection < 0)            newGameWindowSelection = choices-1;
-	
-   if(input == 'E' || input == 'e'){
-   	werase(newGameWindow); 
-      wborder(newGameWindow, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
-   	wrefresh(newGameWindow);
-   	return GAMEPLAY;
-   }
-   if(newGameWindow == NULL){
-   	newGameWindow   = CreateWindow(NEW_GAME_WINDOW_WIDTH, NEW_GAME_WINDOW_HEIGHT,startx+(gameWidth-NEW_GAME_WINDOW_WIDTH)*.5,(starty) + (gameHeight-NEW_GAME_WINDOW_HEIGHT)*.5); 
-   	wattron(newGameWindow,COLOR_PAIR(1));
-		keypad(newGameWindow,TRUE);
-		
-   }else werase(newGameWindow);
-
-   box(newGameWindow,0,0);
-   mvwprintw(newGameWindow,0,(NEW_GAME_WINDOW_WIDTH-strlen(windowTitle))*.5,windowTitle);
-   mvwprintw(newGameWindow,1,1,"(%c) Random Walls%s",((enabledWalls) ? '*' : ' '),((newGameWindowSelection == 0) ? " <--"  : " "));
-   mvwprintw(newGameWindow,2,1,"(%c) Increment Speed%s",((enabledIncrementalSpeed) ? '*' : ' '), ((newGameWindowSelection == 1) ? " <--" : " "));
-   mvwprintw(newGameWindow,NEW_GAME_WINDOW_HEIGHT-2,1,"%s %*s", "C:", 10,"Change");
-   mvwprintw(newGameWindow,NEW_GAME_WINDOW_HEIGHT-3,1,"%s %*s", "E:", 8,"Exit");
-   mvwprintw(newGameWindow,NEW_GAME_WINDOW_HEIGHT-4,1,"%s %*s", "SPACE:", 7,"Confirm");
-	wrefresh(newGameWindow);
-
-	return OPTIONS;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
