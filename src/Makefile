@@ -1,11 +1,12 @@
 CFLAGS := -g -O2 -std=c99 -Wall -pedantic 
-LFLAGS := -Wl,-Bstatic -lncursesw -Wl,-Bdynamic 
+LFLAGS := -lncursesw 
+OBJ    := ../bin/snake
 
-all: ../bin/main
+all: ../bin/snake
 
-../bin/main:  main.c
+../bin/snake:  snake.c
 	gcc $(CFLAGS) -o $@ $^ $(LFLAGS)
-	../bin/main
+	../bin/snake
 
 clean:
-	rm ../bin/main && make
+	rm $(OBJ) && make
