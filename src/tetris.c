@@ -41,9 +41,9 @@ typedef struct block{
 //TODO: \n can be replaced by empty space
 char blockGraphics[BLOCKS_NUM][BLOCK_MEM_SIZE] = {
 	{ /* GENERIC */
-		"XXX XXX XXX XXX\n"
-		"XXX XXX XXX XXX\n"
-		"XXX XXX XXX XXX\n"
+		"#XX XXX XXX XXX\n"
+		"X#X XXX XXX XXX\n"
+		"XX# XXX XXX XXX\n"
 		"XXX XXX XXX XXX\n"
 	}, 
 
@@ -125,7 +125,7 @@ int main()
 	
 	gameWindow = newwin(GAME_HEIGHT,GAME_WIDTH,terminalHeight-GAME_HEIGHT,(terminalWidth-GAME_WIDTH)*.5);
 	block newBlock = {0};
-	newBlock.type = O;
+	newBlock.type = T;
 	box(gameWindow,0,0);
 	wrefresh(gameWindow);
 	timeout(FRAME_PERIOD_MS);
@@ -139,12 +139,13 @@ int main()
 		werase(gameWindow);
 		wmove(gameWindow,yCursor,xCursor);
 		box(gameWindow,0,0);
-
+		
+		float currentY = yCursor;
 		for(int row = 0; row < 4; row++){
 			for(int column = 0; column < 4; ++column){
 				char point = blockGraphics[newBlock.type][row*16 + column];
 				if(point == '#') wprintw(gameWindow,"%s","▓");
-				if(point == ' ') wmove(gameWindow,yCursor + 1 ,xCursor);
+				if(point == ' ') wmove(gameWindow,++currentY,xCursor);
 				if(point == 'X') wmove(gameWindow,getcury(gameWindow),getcurx(gameWindow) + 1);
 			}
 		}
