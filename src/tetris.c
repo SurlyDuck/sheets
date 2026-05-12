@@ -97,9 +97,10 @@ char blockGraphics[BLOCKS_NUM][BLOCK_MEM_SIZE] = {
 };
 
 void CloseWindows();
-
+int GetRealBlockSize();
 
 WINDOW *gameWindow;
+block newBlock = {0};
 
 int main()
 {
@@ -125,8 +126,8 @@ int main()
 	}
 	
 	gameWindow = newwin(GAME_HEIGHT,GAME_WIDTH,terminalHeight-GAME_HEIGHT,(terminalWidth-GAME_WIDTH)*.5);
-	block newBlock = {0};
-	newBlock.type = S;
+	newBlock.type = T;
+	newBlock.rotation = 0;
 	box(gameWindow,0,0);
 	wrefresh(gameWindow);
 	timeout(FRAME_PERIOD_MS);
@@ -135,31 +136,35 @@ int main()
 	for(;;){
 		clock_gettime(CLOCK_MONOTONIC,&start);
 		int input = getch();   	
+
 		if(input == 'e' || input == 'E') break;
 		if(input == 'r' || input == 'R'){
 			++newBlock.rotation;
 
-			if(newBlock.rotation >= 4) newBlock.rotation = 0;
+			while(xCursor + GetRealBlockSize() > GAME_WIDTH-1) --xCursor;
+		if(newBlock.rotation >= 4) newBlock.rotation = 0;
 		}else if(input == 'l' || input == 'L'){
 			++xCursor;
+			if(xCursor + GetRealBlockSize() > GAME_WIDTH-1) --xCursor;
 		}else if(input == 'h' || input == 'H'){
 			--xCursor;
+			if(xCursor < 1) xCursor = 1;
 		}
 		werase(gameWindow);
 		wmove(gameWindow,yCursor,xCursor);
 		box(gameWindow,0,0);
 		
+
 		float currentY = yCursor;
 		for(int row = 0; row < 4; row++){
 			for(int column = 0 + newBlock.rotation * 4; column < 4 + newBlock.rotation*4; ++column){
-				char point = blockGraphics[newBlock.type][row*16 + column];
+				char point = blockGraphics[newBlock.type][row*(BLOCK_MEM_SIZE/4)+ column];
 				if(point == '#') wprintw(gameWindow,"%s","▓");
 				if(point == ' ') wmove(gameWindow,++currentY,xCursor);
 				if(point == 'X') wmove(gameWindow,getcury(gameWindow),getcurx(gameWindow) + 1);
 			}
 		}
 		yCursor += BLOCK_SPEED* delta;
-		//xCursor  = 1;
 
 		wrefresh(gameWindow);
 		clock_gettime(CLOCK_MONOTONIC,&stop);
@@ -170,6 +175,19 @@ int main()
 	CloseWindows();
 	return 0;
 
+}
+
+int GetRealBlockSize(){
+	int currentBlockWidth = 1;
+	for(int row = 0; row < 4; ++row){
+		for (int column = 0; column < BLOCK_WIDTH; ++column){
+			char point = blockGraphics[newBlock.type][(row * (BLOCK_MEM_SIZE/4) + newBlock.rotation * 4) + column];
+			if(point == '#' && currentBlockWidth < column+1) ++currentBlockWidth;
+		}
+	}
+
+
+	return currentBlockWidth;
 }
 
 void CloseWindows(){

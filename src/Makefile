@@ -1,4 +1,4 @@
-CFLAGS := -g -O2 -std=c99 -Wall -pedantic 
+CFLAGS := -g -O0 -std=c99 -Wall -pedantic 
 LFLAGS := -lncursesw 
 OBJ    := ../bin/snake ../bin/tetris
 CC     := gcc
