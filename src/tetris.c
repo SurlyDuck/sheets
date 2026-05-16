@@ -1,5 +1,6 @@
 #define _DEFAULT_SOURCE
 #include <stdlib.h>
+#include <stdbool.h>
 #include <locale.h>
 #include <unistd.h>
 #include <time.h>
@@ -14,7 +15,6 @@
 #define GAME_WIDTH       20
 #define GAME_HEIGHT      20
 #define BLOCK_MEM_SIZE ((BLOCK_WIDTH+1) * BLOCK_HEIGHT) * 4 //e.g. 4x3 +1 right space, 4 frames
-
 
 typedef enum blockType{
 	GENERIC,
@@ -36,6 +36,13 @@ typedef struct block{
 	float PosY;
 
 }block;
+typedef struct cell{
+	int color;
+	int x;
+	int y;
+
+}cell;
+
 //TODO: L & J and S & Z can be merged
 //TODO: \n can be replaced by empty space
 char blockGraphics[BLOCKS_NUM][BLOCK_MEM_SIZE] = {
@@ -98,9 +105,11 @@ char blockGraphics[BLOCKS_NUM][BLOCK_MEM_SIZE] = {
 
 void CloseWindows();
 int GetRealBlockSize();
+bool IsBlockColliding();
 
 WINDOW *gameWindow;
 block newBlock = {0};
+cell occupiedCells[GAME_WIDTH*GAME_HEIGHT] = {0};
 
 int main()
 {
@@ -126,6 +135,12 @@ int main()
 	}
 	
 	gameWindow = newwin(GAME_HEIGHT,GAME_WIDTH,terminalHeight-GAME_HEIGHT,(terminalWidth-GAME_WIDTH)*.5);
+	for(int i = 0; i < GAME_WIDTH; ++i){
+	 	occupiedCells[i].y = GAME_HEIGHT -1; 
+		occupiedCells[i].x = i;
+		occupiedCells[i].color = 0x000000;	
+	}
+
 	newBlock.type = T;
 	newBlock.rotation = 0;
 	box(gameWindow,0,0);
@@ -140,9 +155,8 @@ int main()
 		if(input == 'e' || input == 'E') break;
 		if(input == 'r' || input == 'R'){
 			++newBlock.rotation;
-
 			while(xCursor + GetRealBlockSize() > GAME_WIDTH-1) --xCursor;
-		if(newBlock.rotation >= 4) newBlock.rotation = 0;
+			if(newBlock.rotation >= 4) newBlock.rotation = 0;
 		}else if(input == 'l' || input == 'L'){
 			++xCursor;
 			if(xCursor + GetRealBlockSize() > GAME_WIDTH-1) --xCursor;
@@ -150,11 +164,11 @@ int main()
 			--xCursor;
 			if(xCursor < 1) xCursor = 1;
 		}
+
 		werase(gameWindow);
 		wmove(gameWindow,yCursor,xCursor);
 		box(gameWindow,0,0);
 		
-
 		float currentY = yCursor;
 		for(int row = 0; row < 4; row++){
 			for(int column = 0 + newBlock.rotation * 4; column < 4 + newBlock.rotation*4; ++column){
@@ -189,6 +203,30 @@ int GetRealBlockSize(){
 
 	return currentBlockWidth;
 }
+
+bool IsBlockColliding(){
+	/*
+	{ 
+		"#XX XXX XXX XXX "
+		"X#X XXX XXX XXX "
+		"XX# XXX XXX XXX "
+		"XXX XXX XXX XXX "
+	} */
+
+	for(int i = 0; i < GAME_WIDTH*GAME_HEIGHT; ++i){
+		c = occupiedCells[i];
+		for(int row = 0; row < BLOCK_HEIGHT; ++row){
+			for(int column = 0; column < BLOCK_WIDTH; ++column){
+			
+				blockGraphics[newBlock.type];
+			}
+		}	
+
+	}
+	return false;
+}
+
+
 
 void CloseWindows(){
 	endwin();
