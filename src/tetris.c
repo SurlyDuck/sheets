@@ -16,6 +16,8 @@
 #define GAME_HEIGHT      20
 #define BLOCK_MEM_SIZE ((BLOCK_WIDTH+1) * BLOCK_HEIGHT) * 4 //e.g. 4x3 +1 right space, 4 frames
 
+#define ArrayLen(array) sizeof(array)/sizeof(array[0])
+
 typedef enum blockType{
 	GENERIC,
 	O,
@@ -104,6 +106,7 @@ char blockGraphics[BLOCKS_NUM][BLOCK_MEM_SIZE] = {
 };
 
 void CloseWindows();
+void DrawOccupiedCells();
 int GetRealBlockSize();
 bool IsBlockColliding();
 
@@ -136,13 +139,14 @@ int main()
 	
 	gameWindow = newwin(GAME_HEIGHT,GAME_WIDTH,terminalHeight-GAME_HEIGHT,(terminalWidth-GAME_WIDTH)*.5);
 	for(int i = 0; i < GAME_WIDTH; ++i){
-	 	occupiedCells[i].y = GAME_HEIGHT -1; 
+	 	occupiedCells[i].y = GAME_HEIGHT -1;
 		occupiedCells[i].x = i;
 		occupiedCells[i].color = 0x000000;	
 	}
 
 	newBlock.type = T;
 	newBlock.rotation = 0;
+	newBlock.color = 0xFF0000;
 	box(gameWindow,0,0);
 	wrefresh(gameWindow);
 	timeout(FRAME_PERIOD_MS);
@@ -179,6 +183,9 @@ int main()
 			}
 		}
 		yCursor += BLOCK_SPEED* delta;
+		newBlock.PosX = xCursor;
+		newBlock.PosY = yCursor;
+		if(IsBlockColliding()) yCursor -= BLOCK_SPEED* delta;
 
 		wrefresh(gameWindow);
 		clock_gettime(CLOCK_MONOTONIC,&stop);
@@ -205,28 +212,21 @@ int GetRealBlockSize(){
 }
 
 bool IsBlockColliding(){
-	/*
-	{ 
-		"#XX XXX XXX XXX "
-		"X#X XXX XXX XXX "
-		"XX# XXX XXX XXX "
-		"XXX XXX XXX XXX "
-	} */
-
-	for(int i = 0; i < GAME_WIDTH*GAME_HEIGHT; ++i){
-		c = occupiedCells[i];
-		for(int row = 0; row < BLOCK_HEIGHT; ++row){
-			for(int column = 0; column < BLOCK_WIDTH; ++column){
-			
-				blockGraphics[newBlock.type];
+	for(int row = 0; row < BLOCK_HEIGHT; ++row){
+		for(int column = 0; column < BLOCK_WIDTH; ++column){
+			char c = blockGraphics[newBlock.type][row*16 + column + newBlock.rotation * 4];
+			if(c == '#') {
+				int cellX = newBlock.PosX + column;
+				int cellY = newBlock.PosY + row;
+				for(int cell = 0; cell < ArrayLen(occupiedCells); ++cell){
+					if(cellX == occupiedCells[cell].x && cellY == occupiedCells[cell].y) return true;
+				}
 			}
-		}	
+		}
+	}	
 
-	}
 	return false;
 }
-
-
 
 void CloseWindows(){
 	endwin();
