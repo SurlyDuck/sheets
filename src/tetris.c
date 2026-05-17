@@ -27,7 +27,6 @@ typedef enum blockType{
 	L,
 	J,
 	T
-
 }blockType;
 
 typedef struct block{
@@ -36,13 +35,12 @@ typedef struct block{
 	int color;
 	float PosX;
 	float PosY;
-
 }block;
+
 typedef struct cell{
 	int color;
 	int x;
 	int y;
-
 }cell;
 
 //TODO: L & J and S & Z can be merged
@@ -107,12 +105,15 @@ char blockGraphics[BLOCKS_NUM][BLOCK_MEM_SIZE] = {
 
 void CloseWindows();
 void DrawOccupiedCells();
+void SpawnNewBlock();
+void AddOccupiedCells();
 int GetRealBlockSize();
 bool IsBlockColliding();
 
 WINDOW *gameWindow;
 block newBlock = {0};
 cell occupiedCells[GAME_WIDTH*GAME_HEIGHT] = {0};
+int lastOccupiedCell = 0;
 
 int main()
 {
@@ -127,7 +128,7 @@ int main()
 	raw();
 	curs_set(0);
 	move(0,0);
-
+	
 	getmaxyx(stdscr, terminalHeight, terminalWidth);
 	
 	if(terminalWidth < GAME_WIDTH +2 || terminalHeight < GAME_HEIGHT + 5){
@@ -137,16 +138,28 @@ int main()
 		return 1;
 	}
 	
+	if(!has_colors()){
+		printw("Colors not supported. Try a terminal emulator... \n Press any key to contionue \n");
+		return 2;
+	}
+	
+	start_color();
+	//init_color(COLOR_RED,143,11,11);
+	init_color(COLOR_BLACK,0,0,0);
+	//init_color(COLOR_MAGENTA,147,66,173);
+	init_pair(1,COLOR_RED,COLOR_BLACK);
+	init_pair(2,COLOR_MAGENTA,COLOR_BLACK);
+
 	gameWindow = newwin(GAME_HEIGHT,GAME_WIDTH,terminalHeight-GAME_HEIGHT,(terminalWidth-GAME_WIDTH)*.5);
 	for(int i = 0; i < GAME_WIDTH; ++i){
 	 	occupiedCells[i].y = GAME_HEIGHT -1;
 		occupiedCells[i].x = i;
-		occupiedCells[i].color = 0x000000;	
+		occupiedCells[i].color = 0x000000;
+		lastOccupiedCell = i;	
 	}
 
-	newBlock.type = T;
-	newBlock.rotation = 0;
-	newBlock.color = 0xFF0000;
+	SpawnNewBlock();
+
 	box(gameWindow,0,0);
 	wrefresh(gameWindow);
 	timeout(FRAME_PERIOD_MS);
@@ -155,6 +168,8 @@ int main()
 	for(;;){
 		clock_gettime(CLOCK_MONOTONIC,&start);
 		int input = getch();   	
+		xCursor = newBlock.PosX;
+		yCursor = newBlock.PosY;
 
 		if(input == 'e' || input == 'E') break;
 		if(input == 'r' || input == 'R'){
@@ -170,9 +185,11 @@ int main()
 		}
 
 		werase(gameWindow);
+		DrawOccupiedCells();
 		wmove(gameWindow,yCursor,xCursor);
 		box(gameWindow,0,0);
-		
+	
+		wattron(gameWindow,COLOR_PAIR(newBlock.color));
 		float currentY = yCursor;
 		for(int row = 0; row < 4; row++){
 			for(int column = 0 + newBlock.rotation * 4; column < 4 + newBlock.rotation*4; ++column){
@@ -182,10 +199,20 @@ int main()
 				if(point == 'X') wmove(gameWindow,getcury(gameWindow),getcurx(gameWindow) + 1);
 			}
 		}
+	
+		wattroff(gameWindow,COLOR_PAIR(newBlock.color));
 		yCursor += BLOCK_SPEED* delta;
 		newBlock.PosX = xCursor;
 		newBlock.PosY = yCursor;
-		if(IsBlockColliding()) yCursor -= BLOCK_SPEED* delta;
+		
+		if(IsBlockColliding()) {
+			yCursor -= BLOCK_SPEED* delta;
+			newBlock.PosX = xCursor;
+			newBlock.PosY = yCursor;
+			AddOccupiedCells(); 
+			SpawnNewBlock(); 
+		}
+
 
 		wrefresh(gameWindow);
 		clock_gettime(CLOCK_MONOTONIC,&stop);
@@ -226,6 +253,38 @@ bool IsBlockColliding(){
 	}	
 
 	return false;
+}
+
+void DrawOccupiedCells(){
+	for (int i = 0; i <= lastOccupiedCell; ++i){
+		mvwprintw(gameWindow,occupiedCells[i].y,occupiedCells[i].x, "▓");	
+	}
+}
+
+void AddOccupiedCells(){
+	for(int row = 0; row < BLOCK_HEIGHT; ++row){
+		for(int column = 0; column < BLOCK_WIDTH; ++column){
+			char c = blockGraphics[newBlock.type][row*16 + column + newBlock.rotation * 4];
+			if(c == '#') {
+				cell occupiedCell = {0};
+				occupiedCell.x = newBlock.PosX + column;
+				occupiedCell.y = newBlock.PosY + row ;
+				occupiedCell.color  = newBlock.color;
+				++lastOccupiedCell;
+				occupiedCells[lastOccupiedCell] = occupiedCell;
+			}
+		}
+	}	
+}
+
+void SpawnNewBlock(){
+	newBlock.type = I;
+
+	newBlock.rotation = 0;
+	newBlock.color = 2;
+	newBlock.PosX  = GAME_WIDTH/2-1;
+	newBlock.PosY  = 1;
+
 }
 
 void CloseWindows(){
