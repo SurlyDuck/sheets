@@ -107,8 +107,8 @@ void CloseWindows();
 void DrawOccupiedCells();
 void SpawnNewBlock();
 void AddOccupiedCells();
-int GetRealBlockSize();
-bool IsBlockColliding();
+int  GetRealBlockSize();
+cell *IsBlockColliding(block bValue);
 
 WINDOW *gameWindow;
 block newBlock = {0};
@@ -170,6 +170,8 @@ int main()
 		int input = getch();   	
 		xCursor = newBlock.PosX;
 		yCursor = newBlock.PosY;
+		cell *collidedCell;
+		block tempBlock = {newBlock.type, newBlock.rotation, newBlock.color, newBlock.PosX, newBlock.PosY};
 
 		if(input == 'e' || input == 'E') break;
 		if(input == 'r' || input == 'R'){
@@ -179,9 +181,13 @@ int main()
 		}else if(input == 'l' || input == 'L'){
 			++xCursor;
 			if(xCursor + GetRealBlockSize() > GAME_WIDTH-1) --xCursor;
+			tempBlock.PosX = xCursor;
+			if(IsBlockColliding(tempBlock)) --xCursor;
 		}else if(input == 'h' || input == 'H'){
 			--xCursor;
 			if(xCursor < 1) xCursor = 1;
+			tempBlock.PosX = xCursor;
+			if(IsBlockColliding(tempBlock)) ++xCursor;
 		}
 
 		werase(gameWindow);
@@ -205,7 +211,7 @@ int main()
 		newBlock.PosX = xCursor;
 		newBlock.PosY = yCursor;
 		
-		if(IsBlockColliding()) {
+		if((collidedCell = IsBlockColliding(newBlock)) != NULL) { /* VERTICAL COLLISIONS */
 			yCursor -= BLOCK_SPEED* delta;
 			newBlock.PosX = xCursor;
 			newBlock.PosY = yCursor;
@@ -238,21 +244,21 @@ int GetRealBlockSize(){
 	return currentBlockWidth;
 }
 
-bool IsBlockColliding(){
+cell *IsBlockColliding(block bValue){
 	for(int row = 0; row < BLOCK_HEIGHT; ++row){
 		for(int column = 0; column < BLOCK_WIDTH; ++column){
-			char c = blockGraphics[newBlock.type][row*16 + column + newBlock.rotation * 4];
+			char c = blockGraphics[bValue.type][row*16 + column + bValue.rotation * 4];
 			if(c == '#') {
-				int cellX = newBlock.PosX + column;
-				int cellY = newBlock.PosY + row;
+				int cellX = bValue.PosX + column;
+				int cellY = bValue.PosY + row;
 				for(int cell = 0; cell < ArrayLen(occupiedCells); ++cell){
-					if(cellX == occupiedCells[cell].x && cellY == occupiedCells[cell].y) return true;
+					if(cellX == occupiedCells[cell].x && cellY == occupiedCells[cell].y) return &occupiedCells[cell];
 				}
 			}
 		}
 	}	
 
-	return false;
+	return NULL;
 }
 
 void DrawOccupiedCells(){
