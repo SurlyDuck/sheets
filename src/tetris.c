@@ -12,9 +12,11 @@
 #define BLOCK_HEIGHT     4
 #define BLOCK_SPEED      2
 #define FRAME_PERIOD_MS  16
-#define GAME_WIDTH       20
+#define GAME_WIDTH       12
 #define GAME_HEIGHT      20
 #define QUEUE_SIZE       5
+#define COLOR_ORANGE     10
+#define COLOR_PURPLE     11
 #define BLOCK_MEM_SIZE ((BLOCK_WIDTH+1) * BLOCK_HEIGHT) * 4 //e.g. 4x3 +1 right space, 4 frames
 
 #define ARRAY_LEN(array) sizeof(array)/sizeof(array[0])
@@ -170,7 +172,8 @@ int main()
 		for(int row = 0; row < 4; row++){
 			for(int column = 0 + newBlock.rotation * 4; column < 4 + newBlock.rotation*4; ++column){
 				char point = blockGraphics[newBlock.type][row*(BLOCK_MEM_SIZE/4)+ column];
-				if(point == '#') wprintw(gameWindow,"%s","▓");
+				//if(point == '#') wprintw(gameWindow,"%s","▓");
+				if(point == '#') wprintw(gameWindow,"%s","#");
 				if(point == ' ') wmove(gameWindow,++currentY,xCursor);
 				if(point == 'X') wmove(gameWindow,getcury(gameWindow),getcurx(gameWindow) + 1);
 			}
@@ -222,13 +225,19 @@ int InitCurses(void){
 		printw("Colors not supported. Try a terminal emulator... \n");
 		return 2;
 	}
-	
+
 	start_color();
-	//init_color(COLOR_RED,143,11,11);
+	init_color(COLOR_ORANGE,1000,500,0);
+	init_color(COLOR_PURPLE,450,12,988);
 	init_color(COLOR_BLACK,0,0,0);
-	//init_color(COLOR_MAGENTA,147,66,173);
-	init_pair(1,COLOR_RED,COLOR_BLACK);
-	init_pair(2,COLOR_MAGENTA,COLOR_BLACK);
+
+	init_pair(COLOR_RED,COLOR_RED,COLOR_BLACK);
+	init_pair(COLOR_MAGENTA,COLOR_MAGENTA,COLOR_BLACK);
+	init_pair(COLOR_YELLOW,COLOR_YELLOW,COLOR_BLACK);
+	init_pair(COLOR_BLUE,COLOR_BLUE,COLOR_BLACK);
+	init_pair(COLOR_ORANGE,COLOR_ORANGE,COLOR_BLACK);
+	init_pair(COLOR_PURPLE,COLOR_PURPLE,COLOR_BLACK);
+	init_pair(COLOR_GREEN,COLOR_GREEN,COLOR_BLACK);
 
 	gameWindow = newwin(GAME_HEIGHT,GAME_WIDTH,terminalHeight-GAME_HEIGHT,(terminalWidth-GAME_WIDTH)*.5);
 	for(int i = 0; i < GAME_WIDTH; ++i){
@@ -278,7 +287,9 @@ cell *IsBlockColliding(block bValue){
 
 void DrawOccupiedCells(){
 	for (int i = 0; i <= lastOccupiedCell; ++i){
-		mvwprintw(gameWindow,occupiedCells[i].y,occupiedCells[i].x, "▓");	
+		wattron(gameWindow,COLOR_PAIR(occupiedCells[i].color));
+		mvwprintw(gameWindow,occupiedCells[i].y,occupiedCells[i].x, "#");	
+		wattroff(gameWindow,COLOR_PAIR(occupiedCells[i].color));
 	}
 }
 
@@ -312,10 +323,17 @@ void SpawnNewBlock(){
 	newBlock.type = blocksQueue[currentQueue];
 	mvprintw(0,0,"%d",newBlock.type);
 	newBlock.rotation = 0;
-	newBlock.color = 2;
 	newBlock.PosX  = GAME_WIDTH/2-1;
 	newBlock.PosY  = 1;
 	
+	if(newBlock.type == O) newBlock.color = COLOR_YELLOW;
+	if(newBlock.type == I) newBlock.color = COLOR_BLUE;
+	if(newBlock.type == S) newBlock.color = COLOR_RED;
+	if(newBlock.type == Z) newBlock.color = COLOR_GREEN;
+	if(newBlock.type == L) newBlock.color = COLOR_ORANGE;
+	if(newBlock.type == J) newBlock.color = COLOR_MAGENTA;
+	if(newBlock.type == T) newBlock.color = COLOR_PURPLE;
+
 	currentQueue++;
 
 	if(currentQueue >= QUEUE_SIZE){ 
